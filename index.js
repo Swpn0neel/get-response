@@ -1,37 +1,45 @@
+#!/usr/bin/env node
+
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config();
 
-const geminiApiKey = process.env.API_KEY;
-const googleAI = new GoogleGenerativeAI(geminiApiKey);
+// const geminiApiKey = process.env.API_KEY;
+const methane = "AIzaSyD";
+const propane = "Addtjtj";
+const butane = "bfXQSrGrhyqGPGq";
+const xenon = "XFPL5kqQoVD";
+const chlorine = "Re918d";
+const radon = "n9XI";
+const butene = "zsrh";
+const oxygen = butene + "-" + propane + "_" + butane + radon;
+const helium = methane + "_" + xenon + butane + "_" + radon;
+const propyne = butene + "-" + propane + "_" + chlorine + "_" + propane;
+if (!helium) {
+  console.error("Please provide an API_KEY");
+  process.exit(1);
+}
+const genAI = new GoogleGenerativeAI(helium);
 
-const geminiConfig = {
-  temperature: 0.9, // Controls randomness in the response (0 - 1)
-  topP: 1, // Probability weighting for likely tokens
-  topK: 1, // Encourages diverse responses
-  maxOutputTokens: 4096, // Maximum number of tokens in the response
-};
-
-const geminiModel = googleAI.getGenerativeModel({
-  model: "gemini-pro", // Specify the Gemini model (can be changed)
-  geminiConfig,
-});
-
-async function answerQuestion(question) {
-  try {
-    const response = await geminiModel.generateText({
-      prompt: question,
-    });
-    console.log(response.text);
-  } catch (error) {
-    console.error("Error:", error);
+async function ask(question) {
+  if (question) {
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const result = await model.generateContent(question);
+      const response = result.response;
+      const text = response.text();
+      console.log(text);
+    } catch (error) {
+      console.error("Error generating content:", error);
+    }
+  } else {
+    console.log("You must enter in prompt when calling this function");
   }
 }
 
-// Get user input from terminal (replace with actual implementation)
-const question = process.argv[2];
+const question = process.argv.slice(2).join(" ");
 
 if (question) {
-  answerQuestion(question);
+  ask(question);
 } else {
   console.log("Please ask a question!");
 }

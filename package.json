@@ -1,6 +1,6 @@
 {
   "name": "get-response",
-  "version": "1.5.0",
+  "version": "1.6.1",
   "description": "Ask any questions to AI, and get your response right at your terminal",
   "main": "index.js",
   "type": "module",
@@ -10,9 +10,17 @@
   "bin": {
     "get-response": "index.js"
   },
-  "keywords": [],
+  "keywords": [
+    "gen-ai",
+    "chat-bot",
+    "CLI tool"
+  ],
   "author": "Swapnoneel Saha",
   "license": "CC-BY-NC-SA-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Swpn0neel/get-response.git"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.11.3",
     "boxen": "^7.1.1",

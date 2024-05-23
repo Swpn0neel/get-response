@@ -68,6 +68,24 @@ Alternatively, you can also use:
 npx get-response "Write unit test cases for each of the functions" --directory ./sample-app
 ```
 
+### Chat Mode
+
+In the context-based chat mode, you can ask multiple questions in a session:
+
+```sh
+npx get-response -c
+```
+
+Alternatively, you can also use:
+
+```sh
+npx get-response --chat-mode
+```
+
+In the chat mode, the prompt `Type your message: ` will appear, indicating that the tool is ready for you to type your question or command.
+
+To exit the chat mode, type `exit` and press Enter.
+
 ## Contributing
 
 If you want to contribute to this project, please go ahead!! Open an issue or submit a pull request for any improvements, bug fixes or feature implementations.

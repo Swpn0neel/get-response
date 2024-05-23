@@ -3,11 +3,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import path from "path";
 import fs from "fs";
+import readline from "readline";
 import chalk from "chalk";
 import boxen from "boxen";
 import { createSpinner } from "nanospinner";
 
-const version = "1.5.0";
+const version = "1.6.1";
 
 function textFormat(text) {
   let block = 0;
@@ -53,7 +54,7 @@ function textFormat(text) {
     }
   }
 
-  console.log(output);
+  return output;
 }
 
 const key = "AIzaSyD__oeJEDBzUPfeDDLBkU9nOomdyeYkUQs";
@@ -74,7 +75,7 @@ async function ask(question) {
       const response = result.response;
       const text = response.text();
       spinner.success({ text: " Here's your answer:" });
-      textFormat(text);
+      console.log(textFormat(text));
       process.exit(0);
     } catch (error) {
       spinner.error({ text: " Unexpected error while generating content" });
@@ -96,6 +97,12 @@ let question = cmd
       exec != "--file" &&
       exec !== "-d" &&
       exec !== "--directory" &&
+      exec !== "-c" &&
+      exec !== "--chat-mode" &&
+      exec !== "-v" &&
+      exec !== "--version" &&
+      exec !== "-h" &&
+      exec !== "--help" &&
       !exec.startsWith("./")
   )
   .join(" ");
@@ -108,7 +115,13 @@ if (
   !cmd.includes("-f") &&
   !cmd.includes("-d") &&
   !cmd.includes("--file") &&
-  !cmd.includes("--directory")
+  !cmd.includes("--directory") &&
+  !cmd.includes("-c") &&
+  !cmd.includes("--chat-mode") &&
+  !cmd.includes("-v") &&
+  !cmd.includes("--version") &&
+  !cmd.includes("-h") &&
+  !cmd.includes("--help")
 ) {
   console.error(
     "Error: Please use the -f flag for file paths or the -d flag for directory paths."
@@ -226,7 +239,7 @@ ${chalk.underline.yellow("Get-Response : A terminal-based AI chat-bot")}
 
 ${chalk.bold("Usage : ")}
 
-  ${chalk.yellow("npx get-response <question> [flags] [directory path]")}
+  ${chalk.yellow("npx get-response [question] [flags] [directory path]")}
 
 ${chalk.bold("Flags : ")}
 
@@ -238,12 +251,16 @@ ${chalk.bold("Flags : ")}
   ${chalk.cyan(
     "-d <directory>"
   )}      Provide a directory path to include all files' content as context
+  ${chalk.cyan(
+    "-c, --chat-mode"
+  )}     Starts an context-based interactive chat window (type "exit" to exit)
 
 ${chalk.bold("Examples : ")}
 
   ${chalk.dim(`npx get-response "What is the currency of South Africa?"
   npx get-response "What is the currency of South Africa?" -f context.txt
-  npx get-response "What is the currency of South Africa?" -d contextDir`)}
+  npx get-response "What is the currency of South Africa?" -d contextDir
+  npx get-response -c`)}
   
 ${chalk.bold("GitHub Repository : ")} ${chalk.cyan.italic(
   "https://github.com/Swpn0neel/get-response"
@@ -280,5 +297,75 @@ if (cmd.includes("-v") || cmd.includes("--version")) {
   process.exit(0);
 }
 
-if (!question) console.log("Kindly ask a question to get an answer!!");
-else ask(question);
+async function interactive(question, context) {
+  if (question) {
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const result = await model.generateContent(
+        `${question}\nContext:\n${context}`
+      );
+      const response = result.response;
+      const text = response.text();
+      console.log(
+        boxen(textFormat(text), {
+          padding: 1,
+          align: "left",
+          borderColor: "green",
+          title: "AI",
+          titleAlignment: "left",
+        })
+      );
+      return `${question}\nContext:\n${context}\n${text}`;
+    } catch (error) {
+      console.log(chalk.red(" Unexpected error while generating content"));
+      process.exit(1);
+    }
+  } else {
+    console.log(chalk.gray("Please ask a question to get an answer!!"));
+    process.exit(1);
+  }
+}
+
+if (cmd.includes("-c") || cmd.includes("--chat-mode")) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: chalk.cyan("Type your message: "),
+  });
+
+  let context = "";
+
+  rl.prompt();
+  rl.on("line", async (line) => {
+    const input = line.trim();
+    if (input.toLowerCase() === "exit") {
+      rl.close();
+    } else {
+      readline.moveCursor(process.stdout, 0, -1);
+      readline.clearLine(process.stdout, 0);
+      readline.cursorTo(process.stdout, 0);
+      console.log(
+        "\n" +
+          boxen(chalk.cyan(input), {
+            padding: 1,
+            align: "left",
+            borderColor: "cyan",
+            title: "You",
+            titleAlignment: "left",
+          })
+      );
+      context = await interactive(input, context);
+      rl.prompt();
+    }
+  }).on("close", () => {
+    console.log(chalk.red("Exiting chat mode."));
+    process.exit(0);
+  });
+} else {
+  if (question) {
+    ask(question);
+  } else {
+    console.log("Please ask a question!");
+    process.exit(0);
+  }
+}

@@ -7,6 +7,8 @@ import chalk from "chalk";
 import boxen from "boxen";
 import { createSpinner } from "nanospinner";
 
+const version = "1.5.0";
+
 function textFormat(text) {
   let block = 0;
   let code = ``;
@@ -195,6 +197,7 @@ if (cmd.includes("-d") || cmd.includes("--directory")) {
           } else {
             const fileContent = fs.readFileSync(filePath, "utf-8");
             content += `\n\nContext from ${filePath}:\n${fileContent}`;
+            spinner.success({ text: `Read this file successfully: ${file}` });
           }
         }
       });
@@ -214,6 +217,67 @@ if (cmd.includes("-d") || cmd.includes("--directory")) {
     console.log("Please provide a directory path after the -d flag.");
     process.exit(1);
   }
+}
+
+const help = `
+${chalk.underline.yellow("Get-Response : A terminal-based AI chat-bot")}
+
+[ ${chalk.italic.cyan("Created by Swapnoneel Saha")} ]
+
+${chalk.bold("Usage : ")}
+
+  ${chalk.yellow("npx get-response <question> [flags] [directory path]")}
+
+${chalk.bold("Flags : ")}
+
+  ${chalk.cyan("-h, --help")}          Show this help message and exit
+  ${chalk.cyan("-v, --version")}       Show the version number and exit
+  ${chalk.cyan(
+    "-f <file>"
+  )}           Provide a file path to include its content as context
+  ${chalk.cyan(
+    "-d <directory>"
+  )}      Provide a directory path to include all files' content as context
+
+${chalk.bold("Examples : ")}
+
+  ${chalk.dim(`npx get-response "What is the currency of South Africa?"
+  npx get-response "What is the currency of South Africa?" -f context.txt
+  npx get-response "What is the currency of South Africa?" -d contextDir`)}
+  
+${chalk.bold("GitHub Repository : ")} ${chalk.cyan.italic(
+  "https://github.com/Swpn0neel/get-response"
+)}
+
+${chalk.red(
+  "In case of any issues/feature requests, please report it on GitHub!!"
+)}`;
+
+const helpMsg = boxen(help, {
+  padding: 1,
+  title: "Welcome",
+  titleAlignment: "center",
+  borderStyle: "double",
+  borderColor: "green",
+});
+
+if (cmd.includes("-h") || cmd.includes("--help")) {
+  console.log(helpMsg);
+  process.exit(0);
+}
+
+const versionMsg = `
+${chalk.bold("Installed version of")} ${chalk.bold.cyan(
+  "get-response"
+)} ${chalk.bold("is:")} ${chalk.yellow.bold(version)}
+  
+To update to the latest version, run ${chalk.cyan(
+  "npm i get-response -g"
+)} in your terminal!!`;
+
+if (cmd.includes("-v") || cmd.includes("--version")) {
+  console.log(versionMsg);
+  process.exit(0);
 }
 
 if (!question) console.log("Kindly ask a question to get an answer!!");

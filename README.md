@@ -1,13 +1,13 @@
 # **Get Response** - A terminal-based AI chat-bot
 
-Get-Response is a node.js based command-line interface (CLI) tool that interacts with the Google's Gemini API to generate content based on the user input. This tool allows you to ask questions directly or provide context from files or directories, and get the response in a simple and easy to understand manner.
+Get-Response is a node.js based command-line interface (CLI) created by [Swapnoneel Saha](https://x.com/swapnoneel123) tool that interacts with the Google's Gemini API to generate content based on the user input. This tool allows you to ask questions directly or provide context from files or directories, and get the response in a simple and easy to understand interface. Also, you can automate some terminal commands by prompting for the task.
 
 ## Installation
 
-To install this package, you need to have node.js and npm installed in your machine. You can install the package globally using npx:
+To install this package, you need to have node.js and npm installed in your machine. If you don't have them installed, you can refer to this [article](https://swapnoneel.hashnode.dev/nodejs-npm-nvm). Once that's done, you can install the package globally by using this command in your terminal:
 
 ```sh
-npx get-response
+npm i get-response -g
 ```
 
 ## Usage
@@ -34,6 +34,38 @@ To provide additional context about your question, you can use the `-d` or `--di
 
 ```sh
 npx get-response "<Ask your question>" -d ./path/to/your/directory
+```
+
+### Chat Mode
+
+In the context-based chat mode, you can ask multiple questions in a session:
+
+```sh
+npx get-response -c
+```
+
+Alternatively, you can also use:
+
+```sh
+npx get-response --chat-mode
+```
+
+In the chat mode, the prompt `Type your message: ` will appear, indicating that the tool is ready for you to type your question or command.
+
+To exit the chat mode, type `exit` and press Enter.
+
+### Terminal Mode
+
+In the terminal mode, you can ask the AI to perform some specific actions and it will automatically execute the commands in your terminal based on your permission:
+
+```sh
+npx get-response "<Mention your task>" -t
+```
+
+Alternatively, you can also use:
+
+```sh
+npx get-response "<Mention your task>" --terminal
 ```
 
 ## Example
@@ -68,23 +100,29 @@ Alternatively, you can also use:
 npx get-response "Write unit test cases for each of the functions" --directory ./sample-app
 ```
 
-### Chat Mode
-
-In the context-based chat mode, you can ask multiple questions in a session:
+### Entering the Chat Mode with a File or Directory Context
 
 ```sh
-npx get-response -c
+npx get-response -c -f ./index.js
 ```
 
-Alternatively, you can also use:
+Or,
 
 ```sh
-npx get-response --chat-mode
+npx get-response -c -d ./sample-app
 ```
 
-In the chat mode, the prompt `Type your message: ` will appear, indicating that the tool is ready for you to type your question or command.
+### Asking to Create a React Application
 
-To exit the chat mode, type `exit` and press Enter.
+```sh
+npx get-response "Create a React application named get-response" -t
+```
+
+Or,
+
+```sh
+npx get-response "Create a React application named get-response" --terminal
+```
 
 ## Contributing
 

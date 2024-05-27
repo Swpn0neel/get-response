@@ -8,14 +8,37 @@ import readline from "readline";
 import chalk from "chalk";
 import boxen from "boxen";
 import { createSpinner } from "nanospinner";
+import latestVersion from "latest-version";
 
-const version = "1.8.0";
+const version = "1.8.2";
 
 const key = "QUl6YVN5RDRLdUdUMjJhQ0VYWlNpOFhDdER3b1BibGI0eUMwQmo4";
 if (!key) {
   console.error(chalk.red("Incorrect API_KEY"));
   process.exit(1);
 }
+
+const isUpdated = async () => {
+  try {
+    const latest = await latestVersion("get-response");
+    if (latest !== version) {
+      console.log(
+        `A new version of get-response is available: ${chalk.yellow(
+          latest
+        )}. You are using version: ${chalk.red(
+          version
+        )}.\n\nTo update, run: ${chalk.yellow(
+          `npm install -g get-response@${latest}`
+        )}`
+      );
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(chalk.red("Error checking for updates:"), error);
+  }
+};
+
+await isUpdated();
 
 function textFormat(text) {
   let block = 0;
@@ -92,7 +115,7 @@ async function interactive(question, context) {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
       const result = await model.generateContent(
-        `${question}\nContext:\n${context}`
+        `${question}\nThe context of the question was based on:\n${context}`
       );
       const response = result.response;
       const text = response.text();
@@ -105,7 +128,7 @@ async function interactive(question, context) {
           titleAlignment: "left",
         })
       );
-      return `${question}\nContext:\n${context}\n${text}`;
+      return `Previous question was: ${question}\nThe context of the question was based on:\n${context}\n\nThe generated answer was:\n${text}`;
     } catch (error) {
       console.log(chalk.red(" Unexpected error while generating content"));
       process.exit(1);
@@ -120,12 +143,10 @@ async function interactive(question, context) {
 
 async function askTerminal(question) {
   const spinner = createSpinner();
+  const os = await getOS();
   spinner.start({ text: " Fetching the terminal commands..." });
   if (question) {
-    question =
-      "Write the terminal commands for " +
-      question +
-      ". Just write the commands in simple text, without any explanation, decoration or formatting.";
+    question = `Write the terminal commands to ${question}, for ${os} Operating System. Just write the commands in simple text, without any explanation, decoration or formatting.`;
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
       const result = await model.generateContent(question);
@@ -178,22 +199,39 @@ const genAI = new GoogleGenerativeAI(
 );
 
 async function executeCommands(queue) {
+  console.log(
+    chalk.italic(
+      `Enter ${chalk.green("yes / y")} to execute a particular command.
+Enter ${chalk.magenta("skip / s")} to skip a command and move to the next one.
+Enter ${chalk.red("no / n")} to terminate the process of command execution.`
+    )
+  );
   for (let i = 0; i < queue.length; i++) {
     const command = queue[i];
+    const spinner = createSpinner();
     const answer = await requestPermission(
       `${chalk.blue(
         `Do you want to execute the command`
-      )} "${command}"? (${chalk.green("yes")}/${chalk.red("no")}) `
+      )} "${command}"? (${chalk.green("yes")}/${chalk.magenta(
+        "skip"
+      )}/${chalk.red("no")}) `
     );
     if (answer.toLowerCase() === "yes" || answer.toLowerCase() === "y") {
-      console.log(`${chalk.green("Executing:")} ${command}`);
+      spinner.start({ text: `${chalk.green("Executing:")} ${command}` });
       try {
-        await executeCommand(command);
+        await executeCommand(command, spinner);
       } catch (error) {
-        console.error(`${chalk.red("Error executing command:")} ${command}`);
+        spinner.error({
+          text: `${chalk.red("Error executing command:")} ${command}`,
+        });
         console.error(error.message);
         break;
       }
+    } else if (
+      answer.toLowerCase() === "skip" ||
+      answer.toLowerCase() === "s"
+    ) {
+      console.log(`${chalk.magenta("Skipping command: ")}` + command);
     } else {
       console.log("Terminating program.");
       break;
@@ -214,17 +252,32 @@ function requestPermission(query) {
   });
 }
 
-function executeCommand(command) {
+function executeCommand(command, spinner) {
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
       if (error) {
         reject(error);
         return;
       }
-      console.log(`Output: ${stdout}`);
+      spinner.success({
+        text: `Execution completed!! ${stdout ? stdout : stderr}`,
+      });
       resolve();
     });
   });
+}
+
+function getOS() {
+  const platform = process.platform.toLowerCase();
+  const macosPlatforms = ["macos", "macintosh", "macintel", "macppc", "mac68k"];
+  const windowsPlatforms = ["win32", "win64", "windows", "wince"];
+  const iosPlatforms = ["iphone", "ipad", "ipod"];
+  let os = null;
+  if (macosPlatforms.indexOf(platform) !== -1) os = "Mac OS";
+  else if (iosPlatforms.indexOf(platform) !== -1) os = "iOS";
+  else if (windowsPlatforms.indexOf(platform) !== -1) os = "Windows";
+  else if (/linux/.test(platform)) os = "Linux";
+  return os;
 }
 
 function isSkippable(file) {
@@ -406,7 +459,20 @@ function directoryContext(cmd) {
 }
 
 function chatMode(material) {
-  let context = material ? `Context:\n${material}` : "";
+  let context = material
+    ? `All the necessary details read from the files is:\n\n${material}`
+    : "";
+  console.log(
+    chalk.italic(
+      `Welcome to the interactive chat mode of ${chalk.yellow(
+        "Get Response"
+      )}.\nYou can type ${chalk.yellow(
+        "help"
+      )} if you need any assistance, or type ${chalk.yellow(
+        "exit"
+      )} to quit the chat mode.`
+    )
+  );
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -417,6 +483,9 @@ function chatMode(material) {
     const input = line.trim();
     if (input.toLowerCase() === "exit") {
       rl.close();
+    } else if (input.toLowerCase() === "help") {
+      help();
+      rl.prompt();
     } else {
       readline.moveCursor(process.stdout, 0, -1);
       readline.clearLine(process.stdout, 0);

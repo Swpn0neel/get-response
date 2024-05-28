@@ -28,6 +28,14 @@ To provide additional context about your question, you can use the `-f` or `--fi
 npx get-response "<Ask your question>" -f ./path/to/your/file.js
 ```
 
+### Using a PDF as the Context
+
+To provide additional context about your question, you can use the `-p` or `--pdf` flag followed by the file path:
+
+```sh
+npx get-response "<Ask your question>" -p ./path/to/your/pdf.pdf
+```
+
 ### Using a Directory as the Context
 
 To provide additional context about your question, you can use the `-d` or `--directory` flag followed by the name of the directory:
@@ -53,6 +61,8 @@ npx get-response --chat-mode
 In the chat mode, the prompt `Type your message: ` will appear, indicating that the tool is ready for you to type your question or command.
 
 To exit the chat mode, type `exit` and press Enter.
+
+Also, you can use the chat mode in association with the file, directory and PDF file as the context, using the -f, -d and -p flags respectively.
 
 ### Terminal Mode
 
@@ -88,6 +98,18 @@ Alternatively, you can also use:
 npx get-response "Tell me, what is the function of the variable named toggleMode" --file ./index.js
 ```
 
+### Asking a Question with PDF Context
+
+```sh
+npx get-response "What is the summary of the story" -p ./sample.pdf
+```
+
+Alternatively, you can also use:
+
+```sh
+npx get-response "What is the summary of the story" --pdf ./sample.pdf
+```
+
 ### Asking a Question with Directory Context
 
 ```sh
@@ -100,7 +122,7 @@ Alternatively, you can also use:
 npx get-response "Write unit test cases for each of the functions" --directory ./sample-app
 ```
 
-### Entering the Chat Mode with a File or Directory Context
+### Entering the Chat Mode with a File, Directory or PDF Context
 
 ```sh
 npx get-response -c -f ./index.js
@@ -110,6 +132,12 @@ Or,
 
 ```sh
 npx get-response -c -d ./sample-app
+```
+
+Or,
+
+```sh
+npx get-response -c -p ./sample.pdf
 ```
 
 ### Asking to Create a React Application

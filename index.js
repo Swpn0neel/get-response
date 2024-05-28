@@ -3,14 +3,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import path from "path";
 import fs from "fs";
-import { exec } from "child_process";
+import { spawn, exec } from "child_process";
 import readline from "readline";
+import pdf from "pdf-parse-fork";
 import chalk from "chalk";
 import boxen from "boxen";
 import { createSpinner } from "nanospinner";
 import latestVersion from "latest-version";
 
-const version = "1.8.2";
+const version = "1.8.5";
 
 const key = "QUl6YVN5RDRLdUdUMjJhQ0VYWlNpOFhDdER3b1BibGI0eUMwQmo4";
 if (!key) {
@@ -27,11 +28,8 @@ const isUpdated = async () => {
           latest
         )}. You are using version: ${chalk.red(
           version
-        )}.\n\nTo update, run: ${chalk.yellow(
-          `npm install -g get-response@${latest}`
-        )}`
+        )}.\n\nTo update, run: ${chalk.yellow(`npm i get-response`)}`
       );
-      process.exit(1);
     }
   } catch (error) {
     console.error(chalk.red("Error checking for updates:"), error);
@@ -73,6 +71,10 @@ function textFormat(text) {
       if (text.substring(i, i + 2) === "**") {
         i += 2;
         heading = heading === 2 ? 3 : 2;
+      }
+      if (text.substring(i, i + 2) === "* ") {
+        i += 1;
+        output += chalk.green("•");
       }
       if (heading === 2) {
         output += chalk.cyan.italic(text.charAt(i));
@@ -174,12 +176,40 @@ async function askTerminal(question) {
   }
 }
 
+async function askPDF(question) {
+  const spinner = createSpinner();
+  spinner.start({ text: " Generating your answer..." });
+  if (question) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+      });
+      const result = await model.generateContent(question);
+      const response = result.response;
+      const text = response.text();
+      spinner.success({ text: " Here's your answer:" });
+      console.log(textFormat(text));
+      process.exit(0);
+    } catch (error) {
+      spinner.error({ text: " Unexpected error while generating content" });
+      process.exit(1);
+    }
+  } else {
+    spinner.warn({
+      text: chalk.gray(" Please ask a question to get an answer!!"),
+    });
+    process.exit(1);
+  }
+}
+
 const cmd = process.argv.slice(2);
 let question = cmd
   .filter(
     (exec) =>
       exec !== "-f" &&
       exec != "--file" &&
+      exec != "-p" &&
+      exec != "--pdf" &&
       exec !== "-d" &&
       exec !== "--directory" &&
       exec !== "-c" &&
@@ -239,6 +269,37 @@ Enter ${chalk.red("no / n")} to terminate the process of command execution.`
   }
 }
 
+function executeCommand(command, spinner) {
+  if (command.startsWith("cd ")) {
+    const directory = command.slice(3).trim();
+    try {
+      process.chdir(directory);
+      spinner.success({
+        text: `${chalk.green("Changed directory to:")} ${directory}`,
+      });
+      return Promise.resolve();
+    } catch (error) {
+      spinner.error({
+        text: `${chalk.red("Failed to change directory:")} ${directory}`,
+      });
+      return Promise.reject(error);
+    }
+  } else {
+    return new Promise((resolve, reject) => {
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        spinner.success({
+          text: `Execution completed!! ${stdout ? stdout : stderr}`,
+        });
+        resolve();
+      });
+    });
+  }
+}
+
 function requestPermission(query) {
   const rl = readline.createInterface({
     input: process.stdin,
@@ -248,21 +309,6 @@ function requestPermission(query) {
     rl.question(query, (answer) => {
       rl.close();
       resolve(answer);
-    });
-  });
-}
-
-function executeCommand(command, spinner) {
-  return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      spinner.success({
-        text: `Execution completed!! ${stdout ? stdout : stderr}`,
-      });
-      resolve();
     });
   });
 }
@@ -278,6 +324,41 @@ function getOS() {
   else if (windowsPlatforms.indexOf(platform) !== -1) os = "Windows";
   else if (/linux/.test(platform)) os = "Linux";
   return os;
+}
+
+async function pdfReader(cmd) {
+  let material = "";
+  const index =
+    (cmd.indexOf("-p") > cmd.indexOf("--pdf")
+      ? cmd.indexOf("-p")
+      : cmd.indexOf("--pdf")) + 1;
+  if (index < cmd.length) {
+    const spinner = createSpinner();
+    spinner.start({ text: "Reading your file..." });
+    let file = cmd[index];
+    try {
+      if (path.extname(file) !== ".pdf") {
+        spinner.error({
+          text: `${chalk.red(
+            "Cannot read this file, it is not a PDF:"
+          )} ${file}`,
+        });
+      } else {
+        const filePath = path.resolve(file);
+        const dataBuffer = fs.readFileSync(filePath);
+        const data = await pdf(dataBuffer);
+        material = `${question}\n\nContext of the question is:\n${data.text}`;
+        spinner.success({ text: "File read successfully." });
+      }
+    } catch (error) {
+      spinner.error({ text: `Error while reading the file: ${error}` });
+      process.exit(1);
+    }
+  } else {
+    console.log("Please provide a file path after the -p flag.");
+    process.exit(1);
+  }
+  return material;
 }
 
 function isSkippable(file) {
@@ -324,6 +405,9 @@ ${chalk.bold("Flags : ")}
     "-d <directory>"
   )}      Provide a directory path to include all files' content as context
   ${chalk.cyan(
+    "-p <pdf-file>"
+  )}       Provide a PDF file to include its content as context
+  ${chalk.cyan(
     "-c, --chat-mode"
   )}     Starts an context-based interactive chat window (type "exit" to exit)
   ${chalk.cyan(
@@ -333,11 +417,13 @@ ${chalk.bold("Flags : ")}
 ${chalk.bold("Examples : ")}
 
   ${chalk.dim(`npx get-response "How is Python better than C++?"
-  npx get-response "What is the function isRand() doing?" -f context.txt
+  npx get-response "What is the function isRand() doing?" -f context.js
+  npx get-response "Who is the writer of this book?" -p context.pdf
   npx get-response "How to import app.js within index.js?" -d contextDir
   npx get-response "Create a React app named get-response" -t
   npx get-response -c
   npx get-response -c -f context.txt
+  npx get-response -c -p context.pdf
   npx get-response -c -d contextDir`)}
   
 ${chalk.bold("GitHub Repository : ")}           ${chalk.cyan.italic(
@@ -509,7 +595,14 @@ function chatMode(material) {
   });
 }
 
-if (cmd.includes("-f") || cmd.includes("--file")) {
+if (cmd.includes("-p") || cmd.includes("--pdf")) {
+  if (cmd.includes("-c") || cmd.includes("--chat-mode"))
+    chatMode(await pdfReader(cmd));
+  else {
+    question = await pdfReader(cmd);
+    askPDF(question);
+  }
+} else if (cmd.includes("-f") || cmd.includes("--file")) {
   if (cmd.includes("-c") || cmd.includes("--chat-mode"))
     chatMode(fileContext(cmd));
   else {

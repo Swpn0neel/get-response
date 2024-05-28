@@ -1,6 +1,6 @@
 {
   "name": "get-response",
-  "version": "1.8.2",
+  "version": "1.8.5",
   "description": "Ask any questions to AI, and get your response right at your terminal",
   "main": "index.js",
   "type": "module",
@@ -18,7 +18,9 @@
     "terminal",
     "google",
     "ai",
-    "gemini"
+    "gemini",
+    "automation",
+    "ai agent"
   ],
   "author": "Swapnoneel Saha",
   "license": "CC-BY-NC-SA-3.0",
@@ -32,6 +34,7 @@
     "chalk": "^5.3.0",
     "latest-version": "^9.0.0",
     "nanospinner": "^1.1.0",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "pdf-parse-fork": "^1.2.0"
   }
 }

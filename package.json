@@ -1,6 +1,6 @@
 {
   "name": "get-response",
-  "version": "1.8.5",
+  "version": "1.9.0",
   "description": "Ask any questions to AI, and get your response right at your terminal",
   "main": "index.js",
   "type": "module",
@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.11.3",
+    "axios": "^1.7.2",
     "boxen": "^7.1.1",
     "chalk": "^5.3.0",
     "latest-version": "^9.0.0",

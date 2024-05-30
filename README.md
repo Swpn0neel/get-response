@@ -1,6 +1,6 @@
 # **Get Response** - A terminal-based AI chat-bot
 
-Get-Response is a node.js based command-line interface (CLI) created by [Swapnoneel Saha](https://x.com/swapnoneel123) tool that interacts with the Google's Gemini API to generate content based on the user input. This tool allows you to ask questions directly or provide context from files or directories, and get the response in a simple and easy to understand interface. Also, you can automate some terminal commands by prompting for the task.
+Get-Response is a node.js based command-line interface (CLI) created by [Swapnoneel Saha](https://x.com/swapnoneel123) tool that interacts with the Google's Gemini API to generate content based on the user input. This tool allows you to ask questions directly or provide context from files or directories, and get the response in a simple and easy to understand interface. Also, you can automate some terminal commands by prompting for the task. And additionally, we also have support for responses from Stack Exchange sites like [Stack Overflow](https://stackoverflow.com)
 
 ## Installation
 
@@ -78,6 +78,22 @@ Alternatively, you can also use:
 npx get-response "<Mention your task>" --terminal
 ```
 
+### Get Response from Stack Exchange
+
+You can also ask a question to Stack Exchange and get the response based on the most relevant conversations based on that topic, also you can limit the number of links that you want to see from the response.
+
+```sh
+npx get-response "Mention your question/problem" -s "maximum number of links"
+```
+
+Alternatively, you can also use:
+
+```sh
+npx get-response "Mention your question/problem" --search-stack "maximum number of links"
+```
+
+Other than this, we also have a Stack Exchange interface in the live chat mode, and you can switch to it whenever you want by typing `stack` as a response, while you are on the chat mode. And you will be able to have a conversation with the StackAI. To switch back to the AI chat mode, you can simply type `chat` as a response, and you'll be back on the interactive chat mode with the context of the previous interactions of the current session!
+
 ## Example
 
 ### Asking a Simple Question
@@ -149,7 +165,19 @@ npx get-response "Create a React application named get-response" -t
 Or,
 
 ```sh
-npx get-response "Create a React application named get-response" --terminal
+npx get-response "Create a directory named 'hello' and a text file named 'hi' inside it" --terminal
+```
+
+### Asking for the solution to a problem from Stack Exchange
+
+```sh
+npx get-response "How to shutdown a PC from the terminal?" -s 3
+```
+
+Or,
+
+```sh
+npx get-response "How to copy a file from one directory to another?" --search-stack 10
 ```
 
 ## Contributing

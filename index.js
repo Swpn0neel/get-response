@@ -3,7 +3,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import path from "path";
 import fs from "fs";
-import { spawn, exec } from "child_process";
+import { exec } from "child_process";
+import axios from "axios";
 import readline from "readline";
 import pdf from "pdf-parse-fork";
 import chalk from "chalk";
@@ -11,13 +12,7 @@ import boxen from "boxen";
 import { createSpinner } from "nanospinner";
 import latestVersion from "latest-version";
 
-const version = "1.8.5";
-
-const key = "QUl6YVN5RDRLdUdUMjJhQ0VYWlNpOFhDdER3b1BibGI0eUMwQmo4";
-if (!key) {
-  console.error(chalk.red("Incorrect API_KEY"));
-  process.exit(1);
-}
+const version = "1.9.0";
 
 const isUpdated = async () => {
   try {
@@ -37,6 +32,16 @@ const isUpdated = async () => {
 };
 
 await isUpdated();
+
+const key =
+  "QUl6YVN5RDRLdUdUMjJhQ0VYWlNpOFhDdER3b1BibGI0eUMwQmo4adLcBr3vALjgTkhYOG3Dzw((";
+if (!key) {
+  console.error(chalk.red("Incorrect API_KEY"));
+  process.exit(1);
+}
+const genAI = new GoogleGenerativeAI(
+  Buffer.from(key.substring(0, 52), "base64").toString("utf-8")
+);
 
 function textFormat(text) {
   let block = 0;
@@ -88,6 +93,68 @@ function textFormat(text) {
   return output;
 }
 
+const stackExchangeSites = [
+  "stackoverflow",
+  "serverfault",
+  "superuser",
+  "askubuntu",
+  "math",
+  "unix",
+  "datascience",
+  "codereview",
+];
+
+async function searchStackExchange(question) {
+  const apiUrl = "https://api.stackexchange.com/2.3/search/advanced";
+  const spinner = createSpinner();
+  console.log("\n");
+  spinner.start({ text: "Searching on Stack Exchange..." });
+  const results = [];
+
+  for (const site of stackExchangeSites) {
+    const params = {
+      order: "desc",
+      sort: "relevance",
+      q: question,
+      site: site,
+      key: key.substring(52),
+    };
+    try {
+      const response = await axios.get(apiUrl, { params });
+      const items = response.data.items;
+      const links = items.map((item) => item.link);
+      results.push(...links);
+    } catch (error) {
+      spinner.error({ text: ` Error searching site ${site}` });
+    }
+  }
+  spinner.success({ text: " Stack Exchange search completed!" });
+  return results;
+}
+
+async function askStackExchange(question) {
+  const index =
+    (cmd.indexOf("-s") > cmd.indexOf("--search-stack")
+      ? cmd.indexOf("-s")
+      : cmd.indexOf("--search-stack")) + 1;
+  const limit = index < cmd.length ? parseInt(cmd[index], 10) : 5;
+  try {
+    const links = await searchStackExchange(question);
+    if (!links || links.length === 0)
+      console.log(chalk.red("No relevant posts found!"));
+    else {
+      console.log(chalk.yellow("\nRelevant posts:"));
+      for (let i = 0; i < Math.min(limit, links.length); i++) {
+        console.log(
+          `${chalk.yellow(`${i + 1}.`)} ${chalk.italic.cyan(`${links[i]}`)}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
 async function ask(question) {
   const spinner = createSpinner();
   spinner.start({ text: " Generating your answer..." });
@@ -99,7 +166,6 @@ async function ask(question) {
       const text = response.text();
       spinner.success({ text: " Here's your answer:" });
       console.log(textFormat(text));
-      process.exit(0);
     } catch (error) {
       spinner.error({ text: " Unexpected error while generating content" });
       process.exit(1);
@@ -140,6 +206,55 @@ async function interactive(question, context) {
       text: chalk.gray(" Please ask a question to get an answer!!"),
     });
     process.exit(1);
+  }
+}
+
+async function interactiveStack(question) {
+  const apiUrl = "https://api.stackexchange.com/2.3/search/advanced";
+  const links = [];
+  for (const site of stackExchangeSites) {
+    const params = {
+      order: "desc",
+      sort: "relevance",
+      q: question,
+      site: site,
+      key: "adLcBr3vALjgTkhYOG3Dzw((",
+    };
+    try {
+      const response = await axios.get(apiUrl, { params });
+      const items = response.data.items;
+      const siteLinks = items.map((item) => item.link);
+      links.push(...siteLinks);
+    } catch (error) {
+      console.log(chalk.red(`Error searching site ${site}: ${error.message}`));
+    }
+  }
+  if (!links || links.length === 0) {
+    console.log(
+      boxen(chalk.red("No relevant posts found!"), {
+        padding: 1,
+        align: "left",
+        borderColor: "green",
+        title: "StackAI",
+        titleAlignment: "left",
+      })
+    );
+  } else {
+    let response = ``;
+    for (let i = 0; i < Math.min(5, links.length); i++) {
+      response += `${chalk.yellow(`${i + 1}.`)} ${chalk.italic.cyan(
+        `${links[i]}\n`
+      )}`;
+    }
+    console.log(
+      boxen(response, {
+        padding: 1,
+        align: "left",
+        borderColor: "green",
+        title: "StackAI",
+        titleAlignment: "left",
+      })
+    );
   }
 }
 
@@ -220,13 +335,11 @@ let question = cmd
       exec !== "--help" &&
       exec !== "-t" &&
       exec !== "--terminal" &&
+      exec !== "-s" &&
+      exec !== "--search-stack" &&
       !exec.startsWith("./")
   )
   .join(" ");
-
-const genAI = new GoogleGenerativeAI(
-  Buffer.from(key, "base64").toString("utf-8")
-);
 
 async function executeCommands(queue) {
   console.log(
@@ -412,7 +525,10 @@ ${chalk.bold("Flags : ")}
   )}     Starts an context-based interactive chat window (type "exit" to exit)
   ${chalk.cyan(
     "-t, --terminal"
-  )}      Based on your prompt, generates commands that directly executes on your terminal
+  )}      Based on the prompt, generates commands that directly executes in the terminal
+  ${chalk.cyan(
+    "-s <limit>"
+  )}          Searches your question on Stack Exchange, and provides the relevant links
 
 ${chalk.bold("Examples : ")}
 
@@ -421,6 +537,7 @@ ${chalk.bold("Examples : ")}
   npx get-response "Who is the writer of this book?" -p context.pdf
   npx get-response "How to import app.js within index.js?" -d contextDir
   npx get-response "Create a React app named get-response" -t
+  npx get-response "How to solve IndexOutOfBounds Error in Java?" -s 3
   npx get-response -c
   npx get-response -c -f context.txt
   npx get-response -c -p context.pdf
@@ -544,8 +661,9 @@ function directoryContext(cmd) {
   return material;
 }
 
+let context = ``;
 function chatMode(material) {
-  let context = material
+  context = material
     ? `All the necessary details read from the files is:\n\n${material}`
     : "";
   console.log(
@@ -555,19 +673,24 @@ function chatMode(material) {
       )}.\nYou can type ${chalk.yellow(
         "help"
       )} if you need any assistance, or type ${chalk.yellow(
+        "stack"
+      )} if you want to interact with the Stack Exchange interface, or type ${chalk.yellow(
         "exit"
       )} to quit the chat mode.`
     )
   );
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: chalk.cyan("Type your message: "),
   });
+
   rl.prompt();
+  let input = "";
   rl.on("line", async (line) => {
-    const input = line.trim();
-    if (input.toLowerCase() === "exit") {
+    input = line.trim();
+    if (input.toLowerCase() === "exit" || input.toLowerCase() === "stack") {
       rl.close();
     } else if (input.toLowerCase() === "help") {
       help();
@@ -590,8 +713,76 @@ function chatMode(material) {
       rl.prompt();
     }
   }).on("close", () => {
-    console.log(chalk.red("Exiting chat mode."));
-    process.exit(0);
+    if (input.toLowerCase() === "stack") {
+      stackMode();
+    } else {
+      console.log(chalk.red("Exiting chat mode."));
+    }
+  });
+}
+
+function stackMode() {
+  console.log(
+    chalk.italic(
+      `Switched to the the ${chalk.yellow(
+        "Stack Exchange"
+      )} interface of the chat mode of ${chalk.yellow(
+        "Get Response"
+      )}.\nYou can type ${chalk.yellow(
+        "help"
+      )} if you need any assistance, or type ${chalk.yellow(
+        "exit"
+      )} to quit the chat mode, or type ${chalk.yellow(
+        "chat"
+      )} to switch back to the interactive chat mode.`
+    )
+  );
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: chalk.cyan("Type your message: "),
+  });
+
+  rl.prompt();
+  let input = "";
+  rl.on("line", async (line) => {
+    input = line.trim();
+    if (input.toLowerCase() === "exit" || input.toLowerCase() === "chat") {
+      rl.close();
+    } else if (input.toLowerCase() === "help") {
+      help();
+      rl.prompt();
+    } else {
+      readline.moveCursor(process.stdout, 0, -1);
+      readline.clearLine(process.stdout, 0);
+      readline.cursorTo(process.stdout, 0);
+      console.log(
+        "\n" +
+          boxen(chalk.cyan(input), {
+            padding: 1,
+            align: "left",
+            borderColor: "cyan",
+            title: "You",
+            titleAlignment: "left",
+          })
+      );
+      await interactiveStack(input);
+      rl.prompt();
+    }
+  }).on("close", () => {
+    if (input.toLowerCase() === "chat") {
+      console.log(
+        chalk.italic(
+          `${chalk.bold.red(
+            "Note:"
+          )} The chat context of this session was stored, so you can continue the conversation from where you left earlier.`
+        )
+      );
+      chatMode(context);
+    } else {
+      console.log(chalk.red("Exiting chat mode."));
+    }
   });
 }
 
@@ -616,6 +807,11 @@ if (cmd.includes("-p") || cmd.includes("--pdf")) {
     question = directoryContext(cmd);
     askQuestion(question);
   }
+} else if (cmd.includes("-s") || cmd.includes("--search-stack")) {
+  if (question) {
+    await ask(question);
+    askStackExchange(question);
+  } else console.log(chalk.red("Please provide a question!!"));
 } else if (cmd.includes("-c") || cmd.includes("--chat-mode")) chatMode("");
 else if (cmd.includes("-t") || cmd.includes("--terminal"))
   askTerminal(question);

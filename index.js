@@ -7,12 +7,16 @@ import { exec } from "child_process";
 import axios from "axios";
 import readline from "readline";
 import pdf from "pdf-parse-fork";
+import Tesseract from "tesseract.js";
+import { tmpdir } from "os";
+import { join } from "path";
+import { promisify } from "util";
 import chalk from "chalk";
 import boxen from "boxen";
 import { createSpinner } from "nanospinner";
 import latestVersion from "latest-version";
 
-const version = "1.9.0";
+const version = "1.10.0";
 
 const isUpdated = async () => {
   try {
@@ -27,7 +31,7 @@ const isUpdated = async () => {
       );
     }
   } catch (error) {
-    console.error(chalk.red("Error checking for updates:"), error);
+    console.error(chalk.red("Network error while checking for updates"));
   }
 };
 
@@ -263,7 +267,7 @@ async function askTerminal(question) {
   const os = await getOS();
   spinner.start({ text: " Fetching the terminal commands..." });
   if (question) {
-    question = `Write the terminal commands to ${question}, for ${os} Operating System. Just write the commands in simple text, without any explanation, decoration or formatting.`;
+    question = `Write the terminal commands to ${question}, exactly for ${os} Operating System. Just write the commands in simple text, without any explanation, decoration or formatting.`;
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
       const result = await model.generateContent(question);
@@ -322,9 +326,13 @@ let question = cmd
   .filter(
     (exec) =>
       exec !== "-f" &&
-      exec != "--file" &&
-      exec != "-p" &&
-      exec != "--pdf" &&
+      exec !== "--file" &&
+      exec !== "-p" &&
+      exec !== "--pdf" &&
+      exec !== "-i" &&
+      exec !== "--image" &&
+      exec !== "-m" &&
+      exec !== "--mermaid" &&
       exec !== "-d" &&
       exec !== "--directory" &&
       exec !== "-c" &&
@@ -340,6 +348,81 @@ let question = cmd
       !exec.startsWith("./")
   )
   .join(" ");
+
+function generateRandomString(length) {
+  const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    result += characters[randomIndex];
+  }
+  return result;
+}
+
+const execPromise = promisify(exec);
+async function mermaidImageGen(mermaidCode) {
+  const spinner = createSpinner();
+  spinner.start({ text: " Generating the image..." });
+  const randomFileName = generateRandomString(5) + ".png";
+  const outputFilePath = join(process.cwd(), randomFileName);
+  const tempDir = tmpdir();
+  const mermaidFilePath = join(tempDir, "temp.mmd");
+  try {
+    await fs.promises.writeFile(mermaidFilePath, mermaidCode);
+  } catch (writeError) {
+    spinner.error({
+      text: `Failed to write Mermaid code to temporary file: ${writeError.message}`,
+    });
+    process.exit(1);
+  }
+  const command = `mmdc -i ${mermaidFilePath} -o ${outputFilePath}`;
+  try {
+    const { stdout, stderr } = await execPromise(command);
+    if (stderr) {
+      console.error(`mmdc stderr: ${stderr}`);
+    }
+    spinner.success({
+      text: `Image created successfully at ${outputFilePath}`,
+    });
+  } catch (execError) {
+    spinner.error({
+      text: `Failed to execute mmdc command: ${execError.message}`,
+    });
+  }
+}
+
+async function askMermaid(material) {
+  const spinner = createSpinner();
+  spinner.start({ text: " Generating the mermaid code..." });
+  question = `Instructions for the generated response:\nDON'T USE MARKDOWN FORMATTING. Use SIMPLE TEXT, without any explanation, DECORATION or FORMATTING.\n\nQuestion:\nGenerate the mermaid code for the whole codebase.\n\n${material}`;
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const result = await model.generateContent(question);
+    const response = result.response;
+    const code = response.text();
+    let mermaid = ``;
+    let block = 0;
+    for (let i = 0; i < code.length; i++) {
+      if (code.substring(i, i + 3) === "```") {
+        i += 3;
+        if (block === 0) {
+          block = 1;
+          while (i < code.length && code.charAt(i) !== "\n") i++;
+        } else block = 0;
+      } else mermaid += code.charAt(i);
+    }
+    spinner.success({ text: " Got the mermaid code" });
+    await mermaidImageGen(mermaid.trim());
+    process.exit(0);
+  } catch (error) {
+    console.log(
+      spinner.error({
+        text: " Unexpected error while generating the mermaid code",
+      })
+    );
+    process.exit(1);
+  }
+}
 
 async function executeCommands(queue) {
   console.log(
@@ -474,7 +557,7 @@ async function pdfReader(cmd) {
   return material;
 }
 
-function isSkippable(file) {
+async function isSkippable(file) {
   const stats = fs.statSync(file);
   const maxSize = 3 * 1024 * 1024;
   const largeFile = [".log", ".zip", ".tar", ".rar", ".gz", ".7z"];
@@ -521,11 +604,17 @@ ${chalk.bold("Flags : ")}
     "-p <pdf-file>"
   )}       Provide a PDF file to include its content as context
   ${chalk.cyan(
+    "-i <image>"
+  )}          Provide an image to include its text content as context
+  ${chalk.cyan(
     "-c, --chat-mode"
   )}     Starts an context-based interactive chat window (type "exit" to exit)
   ${chalk.cyan(
     "-t, --terminal"
   )}      Based on the prompt, generates commands that directly executes in the terminal
+  ${chalk.cyan(
+    "-m, --mermaid"
+  )}       Generates the workflow image for the provided content using mermaid
   ${chalk.cyan(
     "-s <limit>"
   )}          Searches your question on Stack Exchange, and provides the relevant links
@@ -538,10 +627,13 @@ ${chalk.bold("Examples : ")}
   npx get-response "How to import app.js within index.js?" -d contextDir
   npx get-response "Create a React app named get-response" -t
   npx get-response "How to solve IndexOutOfBounds Error in Java?" -s 3
+  npx get-response -m -f index.js
+  npx get-response -m -d ./src
   npx get-response -c
   npx get-response -c -f context.txt
   npx get-response -c -p context.pdf
-  npx get-response -c -d contextDir`)}
+  npx get-response -c -d contextDir
+  npx get-response -c -i image.png`)}
   
 ${chalk.bold("GitHub Repository : ")}           ${chalk.cyan.italic(
     "https://github.com/Swpn0neel/get-response"
@@ -579,7 +671,40 @@ function askQuestion(question) {
   else console.error(chalk.red("Please ask a question!"));
 }
 
-function fileContext(cmd) {
+async function imageContext(cmd) {
+  let material = "";
+  const index =
+    (cmd.indexOf("-i") > cmd.indexOf("--image")
+      ? cmd.indexOf("-i")
+      : cmd.indexOf("--image")) + 1;
+  if (index < cmd.length) {
+    console.log(
+      chalk.italic(
+        `${chalk.red(
+          "Note:"
+        )} The image must have text content, for this to work properly.`
+      )
+    );
+    const spinner = createSpinner();
+    spinner.start({ text: " Extracting text from image..." });
+    let imagePath = cmd[index];
+    try {
+      if (!fs.existsSync(imagePath))
+        spinner.error(chalk.red(`Image file not found at path: ${imagePath}`));
+      const result = await Tesseract.recognize(imagePath, "eng");
+      material = `${question}\n\nThe question is asked based on the image, and the extracted text may contain some noise. The text extracted from the image is:\n${result.data.text}`;
+      spinner.success({ text: " Text extracted successfully" });
+    } catch (error) {
+      spinner.error(chalk.red("Error during OCR processing:", error));
+    }
+  } else {
+    console.log("Please provide an image path after the -i flag.");
+    process.exit(1);
+  }
+  return material;
+}
+
+async function fileContext(cmd) {
   let material = "";
   const index =
     (cmd.indexOf("-f") > cmd.indexOf("--file")
@@ -590,7 +715,7 @@ function fileContext(cmd) {
     spinner.start({ text: "Reading your file..." });
     let file = cmd[index];
     try {
-      if (isSkippable(file)) {
+      if (await isSkippable(file)) {
         spinner.error({
           text: `${chalk.red(
             " Cannot read this file, it is too large:"
@@ -612,7 +737,7 @@ function fileContext(cmd) {
   return material;
 }
 
-function directoryContext(cmd) {
+async function directoryContext(cmd) {
   let material = "";
   const index =
     (cmd.indexOf("-d") > cmd.indexOf("--directory")
@@ -645,7 +770,7 @@ function directoryContext(cmd) {
       });
     };
     try {
-      readFilesRecursively(dir);
+      await readFilesRecursively(dir);
       spinner.success({ text: "Completed reading files from the directory" });
       material = `${question}\n\nContext of the question is:\n${content}`;
     } catch (error) {
@@ -786,27 +911,34 @@ function stackMode() {
   });
 }
 
-if (cmd.includes("-p") || cmd.includes("--pdf")) {
+if (cmd.includes("-v") || cmd.includes("--version")) versionMsg(version);
+else if (cmd.includes("-h") || cmd.includes("--help")) help();
+else if (cmd.includes("-p") || cmd.includes("--pdf")) {
   if (cmd.includes("-c") || cmd.includes("--chat-mode"))
     chatMode(await pdfReader(cmd));
   else {
     question = await pdfReader(cmd);
     askPDF(question);
   }
+} else if (cmd.includes("-i") || cmd.includes("--image")) {
+  if (cmd.includes("-c") || cmd.includes("--chat-mode"))
+    chatMode(await imageContext(cmd));
+  else {
+    question = await imageContext(cmd);
+    askQuestion(question);
+  }
 } else if (cmd.includes("-f") || cmd.includes("--file")) {
-  if (cmd.includes("-c") || cmd.includes("--chat-mode"))
-    chatMode(fileContext(cmd));
-  else {
-    question = fileContext(cmd);
-    askQuestion(question);
-  }
+  if (cmd.includes("-m") || cmd.includes("--mermaid")) {
+    askMermaid(await fileContext(cmd));
+  } else if (cmd.includes("-c") || cmd.includes("--chat-mode"))
+    chatMode(await fileContext(cmd));
+  else askQuestion(await fileContext(cmd));
 } else if (cmd.includes("-d") || cmd.includes("--directory")) {
-  if (cmd.includes("-c") || cmd.includes("--chat-mode"))
-    chatMode(directoryContext(cmd));
-  else {
-    question = directoryContext(cmd);
-    askQuestion(question);
-  }
+  if (cmd.includes("-m") || cmd.includes("--mermaid"))
+    askMermaid(await directoryContext(cmd));
+  else if (cmd.includes("-c") || cmd.includes("--chat-mode"))
+    chatMode(await directoryContext(cmd));
+  else askQuestion(await directoryContext(cmd));
 } else if (cmd.includes("-s") || cmd.includes("--search-stack")) {
   if (question) {
     await ask(question);
@@ -815,8 +947,6 @@ if (cmd.includes("-p") || cmd.includes("--pdf")) {
 } else if (cmd.includes("-c") || cmd.includes("--chat-mode")) chatMode("");
 else if (cmd.includes("-t") || cmd.includes("--terminal"))
   askTerminal(question);
-else if (cmd.includes("-h") || cmd.includes("--help")) help();
-else if (cmd.includes("-v") || cmd.includes("--version")) versionMsg(version);
 else {
   if (question) ask(question);
   else

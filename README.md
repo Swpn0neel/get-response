@@ -1,6 +1,6 @@
 # **Get Response** - A terminal-based AI chat-bot
 
-Get-Response is a node.js based command-line interface (CLI) created by [Swapnoneel Saha](https://x.com/swapnoneel123) tool that interacts with the Google's Gemini API to generate content based on the user input. This tool allows you to ask questions directly or provide context from files or directories, and get the response in a simple and easy to understand interface. Also, you can automate some terminal commands by prompting for the task. And additionally, we also have support for responses from Stack Exchange sites like [Stack Overflow](https://stackoverflow.com)
+Get-Response is a node.js based command-line interface (CLI) created by [Swapnoneel Saha](https://x.com/swapnoneel123) tool that interacts with the Google's Gemini API to generate content based on the user input. This tool allows you to ask questions directly or provide context from files, images or directories, and get the response in a simple and easy to understand interface. Also, you can automate some terminal commands by prompting for the task. And additionally, we also have support for responses from Stack Exchange sites like [Stack Overflow](https://stackoverflow.com)
 
 ## Installation
 
@@ -44,6 +44,16 @@ To provide additional context about your question, you can use the `-d` or `--di
 npx get-response "<Ask your question>" -d ./path/to/your/directory
 ```
 
+### Using an Image as the Context
+
+To provide additional context about your question, you can use the `-i` or `--image` flag followed by the name of the image file:
+
+```sh
+npx get-response "<Ask your question>" -i ./path/to/your/image.png
+```
+
+**Note:** The image must contain texts, for valid responses!
+
 ### Chat Mode
 
 In the context-based chat mode, you can ask multiple questions in a session:
@@ -60,7 +70,7 @@ npx get-response --chat-mode
 
 In the chat mode, the prompt `Type your message: ` will appear, indicating that the tool is ready for you to type your question or command.
 
-To exit the chat mode, type `exit` and press Enter.
+To exit the chat mode, type `exit` and press Enter, also you can access the Stack Exchange mode anytime you want by typing `stack` and hitting enter.
 
 Also, you can use the chat mode in association with the file, directory and PDF file as the context, using the -f, -d and -p flags respectively.
 
@@ -93,6 +103,20 @@ npx get-response "Mention your question/problem" --search-stack "maximum number 
 ```
 
 Other than this, we also have a Stack Exchange interface in the live chat mode, and you can switch to it whenever you want by typing `stack` as a response, while you are on the chat mode. And you will be able to have a conversation with the StackAI. To switch back to the AI chat mode, you can simply type `chat` as a response, and you'll be back on the interactive chat mode with the context of the previous interactions of the current session!
+
+### Generate Workflow of the codebase
+
+Using the mermaid code generator, you can generate the entire workflow of the codebase in a single image file. For that, you can use:
+
+```sh
+npx get-response -m -f index.js
+```
+
+Alternatively, you can also give directory as a context,
+
+```sh
+npx get-response -m -d ./src
+```
 
 ## Example
 

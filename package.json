@@ -1,6 +1,6 @@
 {
-  "name": "get-response",
-  "version": "1.10.0",
+  "name": "get-response-lite",
+  "version": "1.2.1",
   "description": "Ask any questions to AI, and get your response right at your terminal",
   "main": "index.js",
   "type": "module",
@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "get-response": "index.js"
+    "get-response-lite": "index.js",
+    "ai": "index.js"
   },
   "keywords": [
     "gen-ai",
@@ -19,6 +20,7 @@
     "google",
     "ai",
     "chatting",
+    "chat-gpt",
     "image",
     "to",
     "text",
@@ -29,18 +31,14 @@
   "author": "Swapnoneel Saha",
   "license": "CC-BY-NC-SA-3.0",
   "repository": {
-    "type": "git",
-    "url": "https://github.com/Swpn0neel/get-response.git"
+    "type": "",
+    "url": ""
   },
   "dependencies": {
     "@google/generative-ai": "^0.11.3",
-    "axios": "^1.7.2",
     "boxen": "^7.1.1",
     "chalk": "^5.3.0",
-    "latest-version": "^9.0.0",
     "nanospinner": "^1.1.0",
-    "path": "^0.12.7",
-    "pdf-parse-fork": "^1.2.0",
-    "tesseract.js": "^5.1.0"
+    "path": "^0.12.7"
   }
 }

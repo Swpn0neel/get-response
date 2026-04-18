@@ -1,213 +1,160 @@
-# **Get Response** - A terminal-based AI chat-bot
+# **Get Response** - A Terminal-Based AI Powerhouse 🚀
 
-Get-Response is a node.js based command-line interface (CLI) created by [Swapnoneel Saha](https://x.com/swapnoneel123) tool that interacts with the Google's Gemini API to generate content based on the user input. This tool allows you to ask questions directly or provide context from files, images or directories, and get the response in a simple and easy to understand interface. Also, you can automate some terminal commands by prompting for the task. And additionally, we also have support for responses from Stack Exchange sites like [Stack Overflow](https://stackoverflow.com)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Gemini 2.5 Flash](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blue.svg)](https://deepmind.google/technologies/gemini/)
 
-## Installation
+**Get-Response** is a cutting-edge, modular CLI tool designed by [Swapnoneel Saha](https://x.com/swapnoneel123) that brings the power of **Google's Gemini** directly to your terminal. It's more than just a chatbot; it's a productivity suite for developers, allowing you to interact with your codebase, documents, images, and even automate terminal tasks through natural language.
 
-To install this package, you need to have node.js and npm installed in your machine. If you don't have them installed, you can refer to this [article](https://swapnoneel.hashnode.dev/nodejs-npm-nvm). Once that's done, you can install the package globally by using this command in your terminal:
+
+> [!TIP]
+> **Looking for something lighter?** Check out [**get-response-lite**](https://github.com/Swpn0neel/get-response-lite), a stripped-down version that focuses only on the essential AI chat features for a zero-weight footprint. Available on [NPM](https://www.npmjs.com/package/get-response-lite).
+
+---
+
+## 🌟 Key Features
+
+- **🚀 Gemini Integration**: Leverages the latest, high-speed model for near-instant responses.
+- **📂 Context-Aware Interaction**: Provide context through single files, entire directories, PDFs, or images (via OCR).
+- **📟 Terminal Automation**: Describe a task (e.g., "Create a React app") and the AI will generate and execute the necessary commands with your permission.
+- **📚 Stack Exchange Integration**: Search across Stack Overflow and other Stack Exchange sites directly from the CLI.
+- **🖼️ Mermaid Workflow Generation**: Automatically generate and render workflow diagrams for your codebase.
+- **💬 Interactive Modes**: Seamlessly switch between AI chat mode and Stack Exchange research mode while maintaining session context.
+- **💅 Beautiful UI**: Rich, styled terminal output using `chalk`, `boxen`, and real-time status spinners.
+
+---
+
+## 🏗️ Architecture
+
+The project follows a modular, functional architecture designed for high maintainability and clarity.
+
+### Directory Structure
+
+```text
+get-response/
+├── index.js                # Main entry point and CLI orchestrator
+├── package.json            # Project dependencies and script definitions
+├── src/                    # Core source code
+│   ├── core/               # Critical logic for data gathering and flow
+│   │   ├── chat.js         # Interactive Chat & Stack mode management
+│   │   └── context.js      # File, PDF, Image, and Directory reading logic
+│   ├── services/           # External API & Tool integrations
+│   │   ├── ai.js           # Google Gemini AI implementation
+│   │   ├── stack.js        # Stack Exchange API wrapper
+│   │   ├── terminal.js     # Command generation and execution engine
+│   │   └── mermaid.js      # Mermaid diagram generation logic
+│   ├── ui/                 # Visual components and templates
+│   │   └── display.js      # Help messages, banners, and version info
+│   └── utils/              # Generic utilities and configuration
+│       ├── config.js       # API keys and project constants
+│       ├── formatter.js    # AI response styling and code-block boxing
+│       └── helpers.js      # OS detection, update checks, and sanitization
+└── node_modules/           # External dependencies
+```
+
+### Module Breakdown
+
+- **`index.js`**: The thin entry layer that parses command-line arguments using `process.argv` and routes them to the appropriate core or service module.
+- **`src/services/ai.js`**: Managed by the `GoogleGenerativeAI` client, it handles prompt engineering and content generation using the `gemini-2.5-flash` model.
+- **`src/core/context.js`**: Uses `pdf-parse-fork` for document ingestion and `tesseract.js` for OCR text extraction from images.
+- **`src/services/terminal.js`**: A bridge between AI-generated commands and the system shell, implementing a safety-first "Request Permission" loop before execution.
+
+---
+
+## 💻 Installation
+
+Ensure you have **Node.js (>=18.0.0)** installed.
 
 ```sh
 npm i get-response -g
 ```
 
-## Usage
+> [!TIP]
+> You can also run it without permanent installation using `npx get-response`.
 
-### Simple Usage
+---
 
-To ask a question directly from the command line (context is not stored for further questions):
+## 🚀 Usage
 
+### Simple Question
 ```sh
-npx get-response "<Ask your question>"
+npx get-response "How do I reverse a linked list in Python?"
 ```
 
-### Using a File as the Context
+### Contextual Knowledge
+| Input Type | Flag | Example |
+| :--- | :--- | :--- |
+| **File** | `-f` | `npx get-response "Explain this code" -f ./auth.js` |
+| **Directory** | `-d` | `npx get-response "Find bugs in this project" -d ./src` |
+| **PDF** | `-p` | `npx get-response "Summarize this paper" -p ./research.pdf` |
+| **Image**| `-i` | `npx get-response "What does this error message mean?" -i ./screenshot.png` |
 
-To provide additional context about your question, you can use the `-f` or `--file` flag followed by the file path:
-
-```sh
-npx get-response "<Ask your question>" -f ./path/to/your/file.js
-```
-
-### Using a PDF as the Context
-
-To provide additional context about your question, you can use the `-p` or `--pdf` flag followed by the file path:
-
-```sh
-npx get-response "<Ask your question>" -p ./path/to/your/pdf.pdf
-```
-
-### Using a Directory as the Context
-
-To provide additional context about your question, you can use the `-d` or `--directory` flag followed by the name of the directory:
-
-```sh
-npx get-response "<Ask your question>" -d ./path/to/your/directory
-```
-
-### Using an Image as the Context
-
-To provide additional context about your question, you can use the `-i` or `--image` flag followed by the name of the image file:
-
-```sh
-npx get-response "<Ask your question>" -i ./path/to/your/image.png
-```
-
-**Note:** The image must contain texts, for valid responses!
-
-### Chat Mode
-
-In the context-based chat mode, you can ask multiple questions in a session:
-
+### Interactive Chat Mode
+Enter a persistent session where context is remembered across multiple questions:
 ```sh
 npx get-response -c
 ```
+*   Type `stack` within chat mode to jump to Stack Exchange research.
+*   Type `chat` within stack mode to return with your context intact.
 
-Alternatively, you can also use:
-
+### Terminal Automation
 ```sh
-npx get-response --chat-mode
+npx get-response "Initialize a git repo and add a basic .gitignore" -t
 ```
 
-In the chat mode, the prompt `Type your message: ` will appear, indicating that the tool is ready for you to type your question or command.
-
-To exit the chat mode, type `exit` and press Enter, also you can access the Stack Exchange mode anytime you want by typing `stack` and hitting enter.
-
-Also, you can use the chat mode in association with the file, directory and PDF file as the context, using the -f, -d and -p flags respectively.
-
-### Terminal Mode
-
-In the terminal mode, you can ask the AI to perform some specific actions and it will automatically execute the commands in your terminal based on your permission:
-
-```sh
-npx get-response "<Mention your task>" -t
-```
-
-Alternatively, you can also use:
-
-```sh
-npx get-response "<Mention your task>" --terminal
-```
-
-### Get Response from Stack Exchange
-
-You can also ask a question to Stack Exchange and get the response based on the most relevant conversations based on that topic, also you can limit the number of links that you want to see from the response.
-
-```sh
-npx get-response "Mention your question/problem" -s "maximum number of links"
-```
-
-Alternatively, you can also use:
-
-```sh
-npx get-response "Mention your question/problem" --search-stack "maximum number of links"
-```
-
-Other than this, we also have a Stack Exchange interface in the live chat mode, and you can switch to it whenever you want by typing `stack` as a response, while you are on the chat mode. And you will be able to have a conversation with the StackAI. To switch back to the AI chat mode, you can simply type `chat` as a response, and you'll be back on the interactive chat mode with the context of the previous interactions of the current session!
-
-### Generate Workflow of the codebase
-
-Using the mermaid code generator, you can generate the entire workflow of the codebase in a single image file. For that, you can use:
-
-```sh
-npx get-response -m -f index.js
-```
-
-Alternatively, you can also give directory as a context,
-
+### Mermaid Diagram Generation
+Generate a visual workflow of your codebase:
 ```sh
 npx get-response -m -d ./src
 ```
 
-## Example
+---
 
-### Asking a Simple Question
+## 🏎️ Full vs. Lite Version
 
-```sh
-npx get-response "What is the currency of South Africa?"
-```
+| Feature | Get-Response (Full) | Get-Response-Lite |
+| :--- | :---: | :---: |
+| **Gemini AI Chat** | ✅ | ✅ |
+| **File Context** | ✅ | ✅ |
+| **Directory Context**| ✅ | ✅ |
+| **OCR (Images)** | ✅ | ❌ |
+| **PDF Parsing** | ✅ | ❌ |
+| **Terminal Automation**| ✅ | ✅ |
+| **Mermaid Diagrams** | ✅ | ❌ |
+| **Stack Exchange** | ✅ | ❌ |
 
-### Asking a Question with File Context
+If you only need core AI interactions without the extra toolset, we recommend [**get-response-lite**](https://www.npmjs.com/package/get-response-lite).
 
-```sh
-npx get-response "Tell me, what is the function of the variable named toggleMode" -f ./index.js
-```
+---
 
-Alternatively, you can also use:
+## 🛠️ Tech Stack
 
-```sh
-npx get-response "Tell me, what is the function of the variable named toggleMode" --file ./index.js
-```
+- **AI Engine**: [Google Gemini 2.5 Flash](https://deepmind.google/technologies/gemini/)
+- **Runtime**: [Node.js](https://nodejs.org/)
+- **Networking**: [Axios](https://axios-http.com/)
+- **OCR**: [Tesseract.js](https://tesseract.projectnaptha.com/)
+- **PDF Parsing**: `pdf-parse-fork`
+- **CLI Aesthetics**: `chalk`, `boxen`, `nanospinner`
+- **Diagrams**: `mermaid-cli`
 
-### Asking a Question with PDF Context
+---
 
-```sh
-npx get-response "What is the summary of the story" -p ./sample.pdf
-```
+## 🤝 Contributing
 
-Alternatively, you can also use:
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-```sh
-npx get-response "What is the summary of the story" --pdf ./sample.pdf
-```
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-### Asking a Question with Directory Context
+---
 
-```sh
-npx get-response "Write unit test cases for each of the functions" -d ./sample-app
-```
+## 🐛 Support & Bug Reporting
 
-Alternatively, you can also use:
+For any questions, suggestions, or issues, please [open an issue](https://github.com/Swpn0neel/get-response/issues) in the GitHub repository.
 
-```sh
-npx get-response "Write unit test cases for each of the functions" --directory ./sample-app
-```
+**Follow the creator:** 
+[![Twitter Follow](https://img.shields.io/twitter/follow/swapnoneel123?style=social)](https://twitter.com/swapnoneel123)
 
-### Entering the Chat Mode with a File, Directory or PDF Context
-
-```sh
-npx get-response -c -f ./index.js
-```
-
-Or,
-
-```sh
-npx get-response -c -d ./sample-app
-```
-
-Or,
-
-```sh
-npx get-response -c -p ./sample.pdf
-```
-
-### Asking to Create a React Application
-
-```sh
-npx get-response "Create a React application named get-response" -t
-```
-
-Or,
-
-```sh
-npx get-response "Create a directory named 'hello' and a text file named 'hi' inside it" --terminal
-```
-
-### Asking for the solution to a problem from Stack Exchange
-
-```sh
-npx get-response "How to shutdown a PC from the terminal?" -s 3
-```
-
-Or,
-
-```sh
-npx get-response "How to copy a file from one directory to another?" --search-stack 10
-```
-
-## Contributing
-
-If you want to contribute to this project, please go ahead!! Open an issue or submit a pull request for any improvements, bug fixes or feature implementations.
-
-## Bug Reporting
-
-For any questions, suggestions or issues, please open an issue in the GitHub repository.
+---
+*Created with ❤️ by Swapnoneel Saha*
